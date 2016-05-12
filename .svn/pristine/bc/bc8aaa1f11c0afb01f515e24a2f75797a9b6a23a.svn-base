@@ -1,0 +1,117 @@
+package com.huawei.xdevice.perfmodel;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+import com.huawei.xdevice.perfmodel.util.CpuUtil;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.view.ContextMenu;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.widget.AdapterView;
+import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Toast;
+
+public class CpuTestActivity extends Activity implements OnItemClickListener {
+
+	private ListView listView;
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.cpu_test);
+		listView = (ListView) findViewById(R.id.cpulistView);
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,android.R.layout.simple_expandable_list_item_1);  
+		for(int i= 0;i<CpuUtil.getNumCores();i++){
+			adapter.add("CPU" + (i+1));
+		}
+		listView.setAdapter(adapter);
+		listView.setOnItemClickListener(this);
+		registerForContextMenu(listView);
+	}
+	
+	@Override
+	public void onItemClick(AdapterView<?> parent, View view, int position,
+			long id) {
+		// TODO Auto-generated method stub
+		Toast.makeText(this, " position " + position, Toast.LENGTH_SHORT).show();
+	}
+	
+	
+	
+	 @Override
+	    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		    System.out.println(" menuInfo " + menuInfo.toString());
+		    menu.setHeaderTitle("CPU核心操作");
+		    // add context menu item
+		    menu.add(0, 1, Menu.NONE, "关闭/启用");
+		    menu.add(0, 2, Menu.NONE, "设置频率为");
+		    menu.add(0, 3, Menu.NONE, "该CPU核心详情");
+	    }
+
+	    @Override
+	    public boolean onContextItemSelected(MenuItem item) {
+
+	        // 得到当前被选中的item信息
+	        AdapterContextMenuInfo menuInfo = (AdapterContextMenuInfo) item.getMenuInfo();
+	        System.out.println(menuInfo.id);
+	        switch(item.getItemId()) {
+	        case 1:
+	            // 开启关闭改核心
+	        	if(CpuUtil.getSingleCpuInfo(0).equals("1")){
+	        		try {
+	        			Process localProcess = Runtime.getRuntime().exec("echo \"1\" > /sys/devices/system/cpu/cpu1/online");
+						BufferedReader mReader = new BufferedReader(new InputStreamReader(localProcess.getInputStream()));
+						StringBuffer mRespBuff = new StringBuffer();
+						char[] buff = new char[1024];
+						int ch = 0;
+						while((ch = mReader.read(buff)) != -1){
+						mRespBuff.append(buff, 0, ch);
+						}
+						mReader.close();
+						System.out.println(mRespBuff);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	        	}else{
+	        		try {
+	        			Process localProcess = Runtime.getRuntime().exec("echo \"0\" > /sys/devices/system/cpu/cpu1/online");
+						BufferedReader mReader = new BufferedReader(new InputStreamReader(localProcess.getInputStream()));
+						StringBuffer mRespBuff = new StringBuffer();
+						char[] buff = new char[1024];
+						int ch = 0;
+						while((ch = mReader.read(buff)) != -1){
+						mRespBuff.append(buff, 0, ch);
+						}
+						mReader.close();
+						System.out.println(mRespBuff);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	        	}
+	        break;
+	        case 2:
+	            // do something
+	        break;
+	        case 3:
+	            // do something
+	        break;
+	        case 4:
+	            // do something
+	        break;
+	        default:
+	        return super.onContextItemSelected(item);
+	        }
+	        return true;
+	    }	
+}

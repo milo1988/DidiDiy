@@ -1,0 +1,504 @@
+package com.huawei.xdevice.perfmodel.util;
+
+import java.io.File;
+import java.io.RandomAccessFile;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.json.JSONObject;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.os.Environment;
+import android.os.RemoteException;
+import android.os.StatFs;
+import android.os.SystemClock;
+import android.os.storage.StorageManager;
+import android.text.format.Formatter;
+import android.util.Log;
+
+
+@SuppressLint({ "InlinedApi", "DefaultLocale" })
+@SuppressWarnings("deprecation")
+public class SDCard {
+	private static final String TAG = "SDCard";
+	public static final String internal = "internal";
+	public static final String external = "external";
+
+	
+
+	/**
+	 * 判断SD卡是否被挂载
+	 * 
+	 * @author y00202274
+	 * @return true:操作成功 false:操作失败
+	 */
+	public static boolean isSDCardExist() {
+		if (Environment.getExternalStorageState().equals(
+				Environment.MEDIA_MOUNTED)) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * 获取默认存储的容量
+	 * 
+	 * @author y00202274
+	 * @return 容量，单位KB或MB
+	 */
+	public static String getCapacityStorage() {
+		String capacity = "";
+		if (Environment.getExternalStorageState().equals(
+				Environment.MEDIA_MOUNTED)) {
+			File path = Environment.getExternalStorageDirectory();
+			StatFs statFs = new StatFs(path.getPath());
+			capacity = fileSize((long) statFs.getBlockCount()
+					* (long) statFs.getBlockSize());
+		}
+		return capacity;
+	}
+	
+	
+//	 /** 
+//     * 获得机身可用内存 
+//     *  
+//     * @return 
+//     */  
+//    private String getRomAvailableSize(Context context) {  
+//        File path = Environment.getDataDirectory();  
+//        StatFs stat = new StatFs(path.getPath());  
+//        long blockSize = stat.getBlockSize();  
+//        long availableBlocks = stat.getAvailableBlocks();  
+//        return Formatter.formatFileSize(context, blockSize * availableBlocks);  
+//    }  
+//    
+//    
+//    /** 
+//     * 获得机身内存总大小 
+//     *  
+//     * @return 
+//     */  
+//    private String getRomTotalSize(Context context) {  
+//        File path = Environment.getDataDirectory();  
+//        StatFs stat = new StatFs(path.getPath());  
+//        long blockSize = stat.getBlockSize();  
+//        long totalBlocks = stat.getBlockCount();  
+//        return Formatter.formatFileSize(context, blockSize * totalBlocks);  
+//    }  
+    
+    
+    /** 
+     * 获得SD卡总大小 
+     *  
+     * @return 
+     */  
+    public static String getSDTotalSize(String path) {  
+        StatFs stat = new StatFs(path);  
+        long blockSize = stat.getBlockSize();  
+        long totalBlocks = stat.getBlockCount();  
+        return fileSize( blockSize * totalBlocks);  
+    }  
+  
+    /** 
+     * 获得sd卡剩余容量，即可用大小 
+     *  
+     * @return 
+     */  
+    private String getSDAvailableSize( String path) {  
+        StatFs stat = new StatFs(path);  
+        long blockSize = stat.getBlockSize();  
+        long availableBlocks = stat.getAvailableBlocks();  
+        return fileSize( blockSize * availableBlocks);  
+    }  
+
+	/**
+	 * 获取SD卡的可用容量
+	 * 
+	 * @author y00202274
+	 * @param sdcardPath
+	 * @return 容量，单位KB或MB
+	 */
+	public static String getAvailableCapacity(String sdcardPath) {
+
+		sdcardPath = handlePath(sdcardPath);
+		String available = "";
+		long capacity = 0;
+		try {
+			File path = new File(sdcardPath);
+			StatFs statFs = new StatFs(path.getPath());
+			capacity = (long) statFs.getAvailableBlocks()
+						* (long) statFs.getBlockSize();
+			available = fileSize(capacity);
+		} catch (Exception e) {
+			Log.i(TAG, e.getClass().toString() + ":"
+					+ e.getMessage().toString());
+		}
+		return available;
+	}
+
+	/**
+	 * 将容量的单位由bytes转化为KB或MB
+	 * 
+	 * @author y00202274
+	 * @param size
+	 * @return 转换后的值
+	 */
+	private static String fileSize(long size) {
+		String str = "";
+		if (size >= 1024) {
+			str = "KB";
+			size /= 1024.0;
+			if (size >= 1024) {
+				str = "MB";
+				size /= 1024.0;
+				if (size >= 1024) {
+					str = "GB";
+					size /= 1024.0;
+				}
+			}	
+		}
+
+		DecimalFormat formatter = new DecimalFormat();
+		formatter.setGroupingSize(3);
+		return formatter.format(size) + str;
+	}
+
+	/**
+	 * 判断sd卡路径是否有效
+	 * 
+	 * @param sdcardPath
+	 * @return
+	 */
+	private static boolean isSdcardPathValid(String sdcardPath) {
+		if (sdcardPath != null && !"".equals(sdcardPath)
+				&& ifContainPathPrefix(sdcardPath)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * 判断sd卡路径中是否包含了必要的前缀
+	 * 
+	 * @param sdcardPath
+	 * @return
+	 */
+	private static boolean ifContainPathPrefix(String sdcardPath) {
+		if (sdcardPath != null) {
+			if (sdcardPath.contains("/mnt/")
+					|| sdcardPath.contains("/storage/")) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * 处理参数后得到sdcardPath
+	 * 
+	 * @param sdcardPath
+	 * @return
+	 */
+	private static String handlePath(String sdcardPath) {
+		sdcardPath = trimSlash(sdcardPath);
+		if (!isSdcardPathValid(sdcardPath)) {
+			sdcardPath = Environment.getExternalStorageDirectory().toString();
+			Log.i(TAG, sdcardPath);
+		}
+		return sdcardPath;
+	}
+
+	/**
+	 * 删除路径后的 / 或 \
+	 * 
+	 * @param sdcardPath
+	 * @return
+	 */
+	private static String trimSlash(String sdcardPath) {
+		boolean flag = true;
+		while (flag) {
+			if (sdcardPath.endsWith("/") || sdcardPath.endsWith("\\")) {
+				sdcardPath = sdcardPath.substring(0, sdcardPath.length() - 1);
+				flag = true;
+			} else {
+				flag = false;
+			}
+		}
+		return sdcardPath;
+	}
+
+
+
+	/**
+	 * 根据路径判断文件是否存在
+	 * 
+	 * @param context
+	 * @param params
+	 *            path 文件路径
+	 * @return true:存在 false:不存在
+	 */
+	public static boolean isPathExist(String params) {
+		try {
+			String path = params;
+			File file = new File(path);
+			if (file.exists()) {
+				return true;
+			} else {
+				return false;
+			}
+
+		} catch (Exception e) {
+			Log.i(TAG, e.getClass().toString() + ":"
+					+ e.getMessage().toString());
+			return false;
+		}
+	}
+
+	public static String getDefaultStoragePath(Context context, String params) {
+		return Environment.getExternalStorageDirectory().toString();
+	}
+
+	/**
+	 * 递归查询文件是否存在
+	 * 
+	 * @param file
+	 *            文件根节点，开始查找的位置
+	 * @param fileName
+	 *            文件名
+	 * @param fuzzy
+	 *            是否模糊匹配 true:模糊匹配 false：精确匹配 return true 在file下存在 false
+	 *            在file下不存在
+	 */
+	private static boolean recursionSearchFile(final File file,
+			final String fileName, final Boolean fuzzy) {
+		// return true if file name is matched
+		if (file.isFile()) {
+			return isFileMatched(file, fileName, fuzzy);
+		}
+		// search the child files if a directory
+		else if (file.isDirectory()) {
+			File[] childFile = file.listFiles();
+			// if empty directory,return false
+			if (null == childFile || 0 == childFile.length) {
+				return false;
+			}
+			boolean hasFound = false;
+			for (File f : childFile) {
+				hasFound = recursionSearchFile(f, fileName, fuzzy);
+				if (hasFound) {
+					return true;
+				}
+			}
+			return false;
+		} else {
+			return false;
+		}
+	}
+
+	/***
+	 * 判断当前文件是否与给定文件名匹配，忽略大小写，支持模糊匹配
+	 * 
+	 * @param file
+	 *            待检测文件
+	 * @param fileName
+	 *            给定的文件名
+	 * @param fuzzy
+	 *            是否模糊匹配 true:模糊匹配 false：精确匹配
+	 * @return true:文件与给定文件名匹配 false:文件与给定文件名不匹配
+	 */
+	private static boolean isFileMatched(final File file,
+			final String fileName, final Boolean fuzzy) {
+		Log.i(TAG, file.getName() + " compare type fuzzy " + fuzzy);
+		if (fuzzy) {
+			return file.getName().toLowerCase()
+					.contains(fileName.toLowerCase());
+		} else {
+			return file.getName().equalsIgnoreCase(fileName);
+		}
+	}
+
+	/**
+	 * 查询文件是否存在
+	 * 
+	 * @param context
+	 * @param params
+	 *            rootPath:开始查找的路径 fileName:文件名 return true 在rootPath下存在 false
+	 *            在rootPath下不存在
+	 */
+	public static boolean searchFile(String params) {
+		try {
+			String path = params;
+			String fileName = params;
+			File file = new File(path);
+			if (file.exists()) {
+				return recursionSearchFile(file, fileName, false);
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			Log.i(TAG, e.getClass() + ":" + e.getMessage());
+			return false;
+		}
+
+	}
+
+	/**
+	 * 测试接口，判断默认存储路径是external 还是 internal
+	 * 
+	 * @return external 外置卡 internal 内置卡
+	 */
+	public static String getDefaultStorageType(String params) {
+		return getDefaultStorageType();
+	}
+
+	/**
+	 * 判断默认存储路径是external 还是 internal
+	 * 
+	 * @return external 外置卡 internal 内置卡
+	 */
+	@SuppressLint("NewApi")
+	private static String getDefaultStorageType() {
+		if (Environment.isExternalStorageRemovable()) {
+			Log.i(TAG, "default storage is " + external);
+			return external;
+		} else {
+			Log.i(TAG, "default storage is " + internal);
+			return internal;
+		}
+	}
+
+
+
+	/**
+	 * 在SD卡或者手机存储的指定路径下创建N个文件夹
+	 * 
+	 * @author n00221817
+	 */
+	public void creatFolder(String params) {
+		File targetFile;
+		String[] rs = params.split(",");
+		String fileName = rs[1];
+		int count = Integer.parseInt(rs[2]);
+		int i = 1;
+		for (i = 1; i <= count; i++) {
+			try {
+				// 创建文件夹
+				if (count == 1) {
+					targetFile = new File("storage/" + rs[0] + "/" + fileName);
+				} else {
+					targetFile = new File("storage/" + rs[0] + "/"
+							+ (fileName + Integer.toString(i)));
+				}
+				if (!targetFile.exists()) {
+					targetFile.mkdirs();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * 在SD卡或者手机内部存储的指定路径下创建文件
+	 * 
+	 * @author n00221817
+	 */
+	public void creatFile(String params) {
+		File targetFile;
+		String path;
+		String[] rs = params.split(",");
+		String StorageType = rs[0];
+		String fileName = rs[1];
+		String fileNum = rs[2];
+		String fileSize = rs[3];
+		int count = Integer.parseInt(fileNum);
+		int i = 1;
+		for (i = 1; i <= count; i++) {                                                                
+			try {
+				if (count == 1) {
+					path = "/storage/" + StorageType + "/" + fileName;
+					targetFile = new File(path);
+				} else {
+					path = "/storage/" + StorageType + "/"
+							+ (Integer.toString(i) + fileName);
+					targetFile = new File(path);
+				}
+				for (int j = 0; j < Integer.parseInt(fileSize); j++) {
+					for (int m = 0; m < 43; m++) {
+						RandomAccessFile raf = new RandomAccessFile(targetFile,
+								"rw");
+						raf.seek(targetFile.length());
+						raf.write("华为技术有限公司".getBytes());
+						raf.close();
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	
+	
+	public static List listAvaliableStorage(Context context) {
+        ArrayList storagges = new ArrayList();
+        StorageManager storageManager = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+        try {
+            Class<?>[] paramClasses = {};
+            Method getVolumeList = StorageManager.class.getMethod("getVolumeList", paramClasses);
+            getVolumeList.setAccessible(true);
+            Object[] params = {};
+            Object[] invokes = (Object[]) getVolumeList.invoke(storageManager, params);
+            if (invokes != null) {
+                StorageInfo info = null;
+                for (int i = 0; i < invokes.length; i++) {
+                    Object obj = invokes[i];
+                    Method getPath = obj.getClass().getMethod("getPath", new Class[0]);
+                    String path = (String) getPath.invoke(obj, new Object[0]);
+                    info = new StorageInfo(path);
+                    File file = new File(info.path);
+                    Log.i(TAG, info.toString() + " " + file.exists() +  " " + file.isDirectory() + " " + file.canWrite());
+                    if ((file.exists()) && (file.isDirectory()) ) {
+                        Method isRemovable = obj.getClass().getMethod("isRemovable", new Class[0]);
+                        String state = null;
+                        try {
+                            Method getVolumeState = StorageManager.class.getMethod("getVolumeState", String.class);
+                            state = (String) getVolumeState.invoke(storageManager, info.path);
+                            info.state = state;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+ 
+                       //挂载上且可移除的
+                        if (info.isMounted() && info.isRemoveable) {
+                            info.isRemoveable = ((Boolean) isRemovable.invoke(obj, new Object[0])).booleanValue();
+                            Log.i(TAG, info.toString());
+                            storagges.add(info);
+                        }
+                    }
+                }
+            }
+        } catch (NoSuchMethodException e1) {
+            e1.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        storagges.trimToSize();
+ 
+        return storagges;
+    }
+
+}

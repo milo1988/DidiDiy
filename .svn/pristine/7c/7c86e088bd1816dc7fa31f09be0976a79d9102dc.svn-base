@@ -1,0 +1,274 @@
+package com.huawei.xdevice.perfmodel.util;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Method;
+import java.util.regex.Pattern;
+
+import android.content.Context;
+import android.util.Log;
+
+public class CpuUtil {
+	
+	private static final String TAG = "CpuUtil";
+	
+	public static String getCpuName(){
+		 try{
+		      FileReader fr = new FileReader("/proc/cpuinfo");
+		      BufferedReader br = new BufferedReader(fr);
+		      String text = br.readLine();
+		      String[] array = text.split(":\\s+",2);
+//		       while( (text = br.readLine()) != null){
+//		    	   if(text.contains("Hardware")){
+//		    		   
+//		    	   }
+//		    	   Log.i(TAG, text);
+//		       }
+		       return array[1];
+		  }catch(FileNotFoundException e){
+		    e.printStackTrace();
+		  }catch (IOException e){
+		     e.printStackTrace();
+		  }
+		   return null;
+		}
+	
+	
+	
+	//CPU个数
+	public static int getNumCores() {
+	    //Private Class to display only CPU devices in the directory listing
+	    class CpuFilter implements FileFilter {
+	        @Override
+	        public boolean accept(File pathname) {
+	            //Check if filename is "cpu", followed by a single digit number
+	            if(Pattern.matches("cpu[0-9]", pathname.getName())) {
+	                return true;
+	            }
+	            return false;
+	        }      
+	    }
+
+	    try {
+	        //Get directory containing CPU info
+	        File dir = new File("/sys/devices/system/cpu/");
+	        //Filter to only list the devices we care about
+	        File[] files = dir.listFiles(new CpuFilter());
+//	        Log.d(TAG, "CPU Count: "+files.length);
+	        //Return the number of cores (virtual CPU devices)
+	        return files.length;
+	    } catch(Exception e) {
+	        //Print exception
+//	        Log.d(TAG, "CPU Count: Failed.");
+	        e.printStackTrace();
+	        //Default to return 1 core
+	        return 1;
+	    }
+	}
+	
+	
+	 private final static String kCpuInfoMaxFreqFilePath = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq";
+
+	    public static int getMaxCpuFreq()
+	    {
+	        int result = 0;
+	        FileReader fr = null;
+	        BufferedReader br = null;
+	        try
+	        {
+	            fr = new FileReader(kCpuInfoMaxFreqFilePath);
+	            br = new BufferedReader(fr);
+	            String text = br.readLine();
+	            result = Integer.parseInt(text.trim());
+	        } catch (FileNotFoundException e)
+	        {
+	            e.printStackTrace();
+	        } catch (IOException e)
+	        {
+	            e.printStackTrace();
+	        } finally
+	        {
+	            if (fr != null)
+	                try
+	                {
+	                    fr.close();
+	                } catch (IOException e)
+	                {
+	                    // TODO Auto-generated catch block
+	                    e.printStackTrace();
+	                }
+	            if (br != null)
+	                try
+	                {
+	                    br.close();
+	                } catch (IOException e)
+	                {
+	                    // TODO Auto-generated catch block
+	                    e.printStackTrace();
+	                }
+	        }
+
+	        return result;
+	    }
+
+	    private final static String kCpuInfoMinFreqFilePath = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq";
+	
+
+	    /* 获取CPU最小频率（单位KHZ） */
+	    public static int getMinCpuFreq()
+	    {
+	        int result = 0;
+	        FileReader fr = null;
+	        BufferedReader br = null;
+	        try
+	        {
+	            fr = new FileReader(kCpuInfoMinFreqFilePath);
+	            br = new BufferedReader(fr);
+	            String text = br.readLine();
+	            result = Integer.parseInt(text.trim());
+	        } catch (FileNotFoundException e)
+	        {
+	            e.printStackTrace();
+	        } catch (IOException e)
+	        {
+	            e.printStackTrace();
+	        } finally
+	        {
+	            if (fr != null)
+	                try
+	                {
+	                    fr.close();
+	                } catch (IOException e)
+	                {
+	                    // TODO Auto-generated catch block
+	                    e.printStackTrace();
+	                }
+	            if (br != null)
+	                try
+	                {
+	                    br.close();
+	                } catch (IOException e)
+	                {
+	                    // TODO Auto-generated catch block
+	                    e.printStackTrace();
+	                }
+	        }
+	        return result;
+	    }
+
+
+	    
+	    public static boolean checkIfCPUx86( ) {  
+	        //1. Check CPU architecture: arm or x86  
+	        if (getSystemProperty("ro.product.cpu.abi", "arm").contains("x86")) {  
+	            //The CPU is x86  
+	            return true;  
+	        } else {  
+	            return false;  
+	        }  
+	    }  
+	    
+	    private static String getSystemProperty(String key, String defaultValue) {  
+	        String value = defaultValue;  
+	        try {  
+	            Class<?> clazz= Class.forName("android.os.SystemProperties");  
+	            Method get = clazz.getMethod("get", String.class, String.class);  
+	            value = (String)(get.invoke(clazz, key, ""));  
+	        } catch (Exception e) {  
+	             Log.d("getSystemProperty", "key = " + key + ", error = " + e.getMessage());  
+	        }  
+	        Log.d("getSystemProperty",  key + " = " + value);  
+	        return value;  
+	    }  
+	    
+	    
+	    
+	    
+	    public static String getCpuInfo() {  
+            String str1 = "/proc/cpuinfo";  
+            String[] arrayOfString ;  
+            try {  
+                FileReader fr = new FileReader(str1);  
+                BufferedReader localBufferedReader = new BufferedReader(fr );  
+                String str2  = localBufferedReader.readLine();  
+ 		        while( (str2 = localBufferedReader.readLine()) != null){
+		    	   if(str2.contains("Hardware")){
+		    		   arrayOfString = str2.split(":"); 
+		    		   Log.i(TAG, str2 + "***" + arrayOfString[0] + "***" + arrayOfString[1]);
+		    		   return arrayOfString[1];  
+		    	   }
+		    	 
+		       }
+                localBufferedReader.close();  
+            } catch (IOException e) { 
+            	
+            }  
+           return null;
+        }
+
+
+
+		public static String getArch() {
+			// TODO Auto-generated method stub
+			 String str1 = "/proc/cpuinfo";  
+	            String[] arrayOfString ;  
+	            try {  
+	                FileReader fr = new FileReader(str1);  
+	                BufferedReader localBufferedReader = new BufferedReader(fr );  
+	                String str2  = localBufferedReader.readLine();  
+	 		        while( (str2 = localBufferedReader.readLine()) != null){
+			    	   if(str2.contains("architecture")){
+			    		   arrayOfString = str2.split(":"); 
+			    		   Log.i(TAG, str2 + "***" + arrayOfString[0] + "***" + arrayOfString[1]);
+			    		   return arrayOfString[1];  
+			    	   }
+			    	 
+			       }
+	                localBufferedReader.close();  
+	            } catch (IOException e) { 
+	            	
+	            }  
+	           return null;
+		}
+		
+		
+		 public static String getCpuInfoDetails() {  
+			    String result = "";
+	            String str1 = "/proc/cpuinfo";  
+	            try {  
+	                FileReader fr = new FileReader(str1);  
+	                BufferedReader localBufferedReader = new BufferedReader(fr );  
+	                String str2  = localBufferedReader.readLine();  
+	 		        while( (str2 = localBufferedReader.readLine()) != null){
+	 		        	result = result + str2;
+			       }
+	                localBufferedReader.close();  
+	            } catch (IOException e) { 
+	            	
+	            }  
+	           return result;
+	        }
+		 
+		 
+		 public static String getSingleCpuInfo(int index) {  
+			    String result = "";
+	            String str1 = "/sys/devices/system/cpu/cpu" + index + "/online";  
+	            try {  
+	                FileReader fr = new FileReader(str1);  
+	                BufferedReader localBufferedReader = new BufferedReader(fr );  
+	                String str2  = localBufferedReader.readLine();  
+	 		        while( (str2 = localBufferedReader.readLine()) != null){
+	 		        	result = result + str2;
+			       }
+	                localBufferedReader.close();  
+	            } catch (IOException e) { 
+	            	
+	            }  
+	           return result;
+	        }
+}

@@ -1,0 +1,323 @@
+package com.huawei.xdevice.perfmodel;
+
+
+import java.util.List;
+
+import com.huawei.xdevice.perfmodel.util.CameraUtil;
+import com.huawei.xdevice.perfmodel.util.CpuUtil;
+import com.huawei.xdevice.perfmodel.util.MemUtil;
+import com.huawei.xdevice.perfmodel.util.SDCard;
+import com.huawei.xdevice.perfmodel.util.StorageInfo;
+import com.huawei.xdevice.perfmodel.util.TeleUtil;
+
+import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
+import android.hardware.Camera.Size;
+import android.os.BatteryManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+import android.telephony.TelephonyManager;
+import android.view.Window;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.widget.RelativeLayout.LayoutParams;
+
+public class DeviceInfoActivity extends Activity {
+
+	private LinearLayout batteryLinearLayout;
+	private LinearLayout sensorLinearView;
+	private final int MSG_REFRESH_UI = 0;
+	private String keyValueSplitStr = "——";
+    Handler mhHandler = new Handler(){
+	        @Override
+	        public void handleMessage(Message msg) {
+	        	    LinearLayout targetLinearLayout = null;
+	            	if(msg.what == MSG_REFRESH_UI){
+	            		targetLinearLayout = batteryLinearLayout;
+	            	}else{
+	            		targetLinearLayout = sensorLinearView;
+	            	}
+	            	targetLinearLayout.removeAllViews();
+	            	for(String str : msg.obj.toString().split("\n")){
+	            		String[] contentLine = str.split(keyValueSplitStr);
+	            		RelativeLayout relativeLayout = new RelativeLayout(DeviceInfoActivity.this);
+	            		TextView textViewLabel = new TextView(DeviceInfoActivity.this);
+	            		TextView textViewValue = new TextView(DeviceInfoActivity.this);
+	            		textViewLabel.setText(contentLine[0]);
+	            		textViewValue.setText(contentLine[1]);
+	            		relativeLayout.addView(textViewLabel);
+	            		
+	            		LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+	            	    lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+	            		relativeLayout.addView(textViewValue, lp);
+	            		targetLinearLayout.addView(relativeLayout);
+	            	}
+	            }
+	      
+	    };
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+		setContentView(R.layout.main_tab1_fragment);
+		
+		//基本信息
+				TextView brandTextView = (TextView) findViewById(R.id.brandTextView);
+				TextView modelTextView = (TextView) findViewById(R.id.modelTextView);
+				TextView cpuTextView = (TextView) findViewById(R.id.cpuTextView);
+				TextView memTextView = (TextView) findViewById(R.id.memTextView);
+				TextView verTextView = (TextView) findViewById(R.id.verTextView);
+				TextView netTextView = (TextView) findViewById(R.id.netTextView);
+				TextView imeiTextView = (TextView) findViewById(R.id.imeiTextView);
+				TextView rootTextView = (TextView) findViewById(R.id.rootTextView);
+				cpuTextView.setText(CpuUtil.getCpuInfo());
+				memTextView.setText(MemUtil.getTotalMemory(this));
+				verTextView.setText("Android " + Build.VERSION.RELEASE);
+				imeiTextView.setText(((TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId());
+				brandTextView.setText(Build.BRAND);
+				modelTextView.setText(Build.MODEL);
+				rootTextView.setText(TeleUtil.haveRoot());
+				netTextView.setText(TeleUtil.getNetworkName(this));
+				
+				//CPU
+				TextView cpuTypeTextView = (TextView) findViewById(R.id.cpuTypeTextView);
+				cpuTypeTextView.setText(CpuUtil.getCpuInfo());
+				TextView cpuarchTextView = (TextView) findViewById(R.id.cpuarchTextView);
+				cpuarchTextView.setText(CpuUtil.getArch());
+				TextView cpuNumTextView = (TextView) findViewById(R.id.cpuNumTextView);
+				cpuNumTextView.setText(CpuUtil.getNumCores() + "核");
+				TextView cpuFeqTextView = (TextView) findViewById(R.id.cpuFeqTextView);
+				cpuFeqTextView.setText(CpuUtil.getMinCpuFreq()/1000 + "~" + CpuUtil.getMaxCpuFreq()/1000 + " MHZ");
+				TextView cpuBitTextView = (TextView) findViewById(R.id.cpuBitTextView);
+				if(CpuUtil.checkIfCPUx86()){
+					cpuBitTextView.setText("32位");
+				}else{
+					cpuBitTextView.setText("64位");
+				}
+				
+				//存储
+				TextView memInfoRamTextView = (TextView) findViewById(R.id.memInfoRamTextView);
+				memInfoRamTextView.setText(MemUtil.getRamInfo(this));
+				TextView phoneRamTextView = (TextView) findViewById(R.id.phoneRamTextView);
+				phoneRamTextView.setText(SDCard.getAvailableCapacity(Environment.getExternalStorageDirectory().getPath()) + "/" + SDCard.getCapacityStorage());
+				TextView sdcardRamTextView = (TextView) findViewById(R.id.sdcardRamTextView);
+				List list = SDCard.listAvaliableStorage(this);
+				if(list.size() > 0){
+					String path = ((StorageInfo) list.get(0)).path;
+					sdcardRamTextView.setText(SDCard.getAvailableCapacity(path) + "/" +  SDCard.getSDTotalSize(path));
+				}else{
+					sdcardRamTextView.setText("无");
+				}
+//				sdcardRamTextView.setText(Arrays.toString(SDCard.listAvaliableStorage(this).toArray()));
+				
+				//显示
+				TextView displayReolutionTextView = (TextView) findViewById(R.id.displayReolutionTextView);
+				displayReolutionTextView.setText(TeleUtil.getScreenHeight(this) + "*" + TeleUtil.getScreenWidth(this));
+				TextView inchTextView = (TextView) findViewById(R.id.InchTextView);
+				inchTextView.setText("unknown");
+				TextView densityTextView = (TextView) findViewById(R.id.densityTextView);
+				densityTextView.setText(String.valueOf(TeleUtil.getScreenDensity(this)));
+				TextView supportMutiTouchTextView = (TextView) findViewById(R.id.supportMutiTouchTextView);
+				if(TeleUtil.isSupportMultiTouch(this)){
+					supportMutiTouchTextView.setText("支持");
+				}else{
+					supportMutiTouchTextView.setText("不支持");
+				}
+				TextView textView = (TextView) findViewById(R.id.supportVideoTextView);
+				textView.setText(TeleUtil.getScreenWidth(this) + "P");
+				
+				
+				//电池
+			    batteryLinearLayout = (LinearLayout) findViewById(R.id.batteryLinearLayout);
+				
+				//摄像头
+//				Camera camera = Camera.open(0); 
+//				Camera.Parameters parameters = camera.getParameters(); 
+//				List<Size> supportedPictureSizes = parameters.getSupportedPictureSizes(); 
+//				Size supportedPictureSize = CameraUtil.getMaxSize(supportedPictureSizes);
+//				int supportSize = supportedPictureSize.width * supportedPictureSize.height/10000;
+//				System.out.println("supportedPictureSize:" + supportedPictureSize.height  + "*" +  supportedPictureSize.width);
+//				TextView cameraInfoBackTextView = (TextView) findViewById(R.id.cameraInfoBackTextView);
+//				cameraInfoBackTextView.setText(supportSize + "W" + " (" + supportedPictureSize.height  + "*" +  supportedPictureSize.width + ") ");
+//				camera.release();
+//				
+//				TextView frontTextView = (TextView) findViewById(R.id.cameraInfoFrontTextView);
+//				int cameraNum = Camera.getNumberOfCameras();
+//				if(cameraNum > 1){
+//					Camera frontCamera = Camera.open(1); 
+//					Camera.Parameters frontParameters = frontCamera.getParameters(); 
+//					//获取摄像头支持的各种分辨率
+//					List<Size> frontSupportedPictureSizes = frontParameters.getSupportedPictureSizes(); 
+//					Size frontPictureSize = CameraUtil.getMaxSize(frontSupportedPictureSizes);
+//					int frontSupportSize = frontPictureSize.width * frontPictureSize.height/10000;
+//					System.out.println("frontSupportSize:" + frontPictureSize.height  + "*" +  frontPictureSize.width);
+//					frontTextView.setText(frontSupportSize + "W" + " (" + frontPictureSize.height  + "*" +  frontPictureSize.width + ") ");
+//					frontCamera.release();
+//				}else{
+//					frontTextView.setText(" 无 ");
+//				}
+				
+				
+				//传感器
+				sensorLinearView = (LinearLayout)  findViewById(R.id.otherInfoLinearView);
+				//从系统服务中获得传感器管理器    
+		        SensorManager sm = (SensorManager) this.getSystemService(Context.SENSOR_SERVICE);    
+		        //从传感器管理器中获得全部的传感器列表    
+		        List<Sensor> allSensors = sm.getSensorList(Sensor.TYPE_ALL);    
+		        String sensorResult = ""; 
+		        for (Sensor s : allSensors) {     
+		                String sensorType = "未知传感器";
+		                switch (s.getType()) {    
+		                case Sensor.TYPE_ACCELEROMETER:    
+		                	sensorType = "加速度传感器 " ;    
+		                        break;    
+		                case Sensor.TYPE_GYROSCOPE:    
+		                	sensorType = "陀螺仪传感器";    
+		                        break;    
+		                case Sensor.TYPE_LIGHT:    
+		                	sensorType =  "环境光线传感器"; 
+		                        break;    
+		                case Sensor.TYPE_MAGNETIC_FIELD:  
+		                	sensorType = "电磁场传感器"; 
+		                        break;    
+		                case Sensor.TYPE_ORIENTATION:    
+		                	sensorType =  "方向传感器"; 
+		                        break;    
+		                case Sensor.TYPE_PRESSURE:    
+		                	sensorType = "压力传感器"; 
+		                        break;    
+		                case Sensor.TYPE_PROXIMITY:    
+		                	sensorType =  "距离传感器"; 
+		                        break;    
+		                case Sensor.TYPE_TEMPERATURE: 
+		                	sensorType = "温度传感器"; 
+		                        break;  
+		                case Sensor.TYPE_GRAVITY:   
+		                	sensorType =  "重力传感器"; 
+		                	    break;
+		                case Sensor.TYPE_LINEAR_ACCELERATION:    
+		                	sensorType = "线性加速传感器"; 
+		                       break; 
+		                case Sensor.TYPE_ROTATION_VECTOR:    
+		                	sensorType = "旋转矢量传感器"; 
+		                       break; 
+		                case Sensor.TYPE_STEP_COUNTER:    
+		                	sensorType = "计步传感器"; 
+		                       break; 
+		                default:    
+		                	sensorType = "未知传感器";
+		                       break;    
+		                }  
+		                sensorResult =  sensorType + keyValueSplitStr + s.getName() + " \n" + sensorResult; 
+		        } 
+		        Message msg = new Message();
+		        msg.what=MSG_REFRESH_UI + 1;
+		        msg.obj = sensorResult;
+		        mhHandler.sendMessage(msg);
+				
+				//电池信息获取
+				 IntentFilter filter = new IntentFilter();
+			     filter.addAction(Intent.ACTION_BATTERY_CHANGED);
+			     this.registerReceiver(mBroadcastReceiver, filter);
+	}
+
+	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+		@Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(Intent.ACTION_BATTERY_CHANGED)) {
+                int status = intent.getIntExtra("status", 0);
+                int health = intent.getIntExtra("health", 0);
+                boolean present = intent.getBooleanExtra("present", false);
+                int level = intent.getIntExtra("level", 0);
+                int scale = intent.getIntExtra("scale", 0);
+//                int icon_small = intent.getIntExtra("icon-small", 0);
+                int plugged = intent.getIntExtra("plugged", 0);
+                int voltage = intent.getIntExtra("voltage", 0);
+                int temperature = intent.getIntExtra("temperature", 0);
+                String technology = intent.getStringExtra("technology");
+
+                String statusString = "";
+                switch (status) {
+                case BatteryManager.BATTERY_STATUS_UNKNOWN:
+                    statusString = "unknown";
+                    break;
+                case BatteryManager.BATTERY_STATUS_CHARGING:
+                    statusString = "charging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_DISCHARGING:
+                    statusString = "discharging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+                    statusString = "not charging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_FULL:
+                    statusString = "full";
+                    break;
+                }
+
+                String healthString = "";
+                switch (health) {
+                case BatteryManager.BATTERY_HEALTH_UNKNOWN:
+                    healthString = "unknown";
+                    break;
+                case BatteryManager.BATTERY_HEALTH_GOOD:
+                    healthString = "good";
+                    break;
+                case BatteryManager.BATTERY_HEALTH_OVERHEAT:
+                    healthString = "overheat";
+                    break;
+                case BatteryManager.BATTERY_HEALTH_DEAD:
+                    healthString = "dead";
+                    break;
+                case BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE:
+                    healthString = "voltage";
+                    break;
+                case BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE:
+                    healthString = "unspecified failure";
+                    break;
+                }
+
+                String acString = "";
+
+                switch (plugged) {
+                case BatteryManager.BATTERY_PLUGGED_AC:
+                    acString = "plugged ac";
+                    break;
+                case BatteryManager.BATTERY_PLUGGED_USB:
+                    acString = "plugged usb";
+                    break;
+                }
+                String s="";
+                s = "充电状态:" + keyValueSplitStr +statusString+" \n"
+                +"健康状态:" + keyValueSplitStr + healthString+" \n"
+                +"电池在位:" + keyValueSplitStr +String.valueOf(present)+" \n"
+                +"电池电量:"+ keyValueSplitStr+String.valueOf(level)+"% \n"
+                +"连接状态:"+ keyValueSplitStr+acString+" \n"
+                +"电池电压:"+ keyValueSplitStr+String.valueOf(voltage/1000.000)+"V \n"
+                +"电池温度:"+ keyValueSplitStr+String.valueOf(temperature/10.0)+"℃ \n"
+                +"电池类型:"+ keyValueSplitStr+technology+" \n";
+                
+                Message msg = new Message();
+                msg.what=MSG_REFRESH_UI;
+                msg.obj = s;
+                mhHandler.sendMessage(msg);
+            }
+        }
+    };
+	
+	
+	
+}

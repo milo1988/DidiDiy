@@ -1,0 +1,92 @@
+package com.huawei.xdevice.perfmodel.util;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.lang.reflect.Method;
+
+
+import android.content.Context;
+import android.telephony.MSimTelephonyManager;
+import android.util.Log;
+
+@SuppressWarnings({ "rawtypes" })
+public class Helper {
+
+	private static final String TAG = "xDevice/Helper";
+
+	/**
+	 * 判断当前手机是否支持多SIM卡
+	 * 
+	 * @author y00202274
+	 * @param context
+	 * @return true：支持; false：不支持
+	 */
+	public static boolean isMultiSIMEnabled(Context context) {
+		try {
+			MSimTelephonyManager mm = new MSimTelephonyManager(context);
+			boolean bool2 = mm.isMultiSimEnabled();
+			return bool2;
+		} catch (Exception e) {
+			Log.e(TAG, e.getClass().toString() + e.getMessage());
+
+			return false;
+		}
+	}
+
+
+	public static boolean isExist(Object... objs) {
+		boolean flag = false;
+		if (objs != null)
+			for (Object obj : objs) {
+				if (obj != null) {
+					flag = true;
+					if (obj instanceof Integer
+							|| obj.getClass().equals(int.class)) {
+						flag = (Integer) obj == Integer.MAX_VALUE ? false
+								: true;
+					} else if (obj instanceof Float
+							|| obj.getClass().equals(float.class)) {
+						flag = (Float) obj == Float.MAX_VALUE ? false : true;
+					} else if (obj instanceof Double
+							|| obj.getClass().equals(double.class)) {
+						flag = (Double) obj == Double.MAX_VALUE ? false : true;
+					}
+					if (flag == true)
+						return flag;
+				}
+			}
+		return flag;
+	}
+
+	/**
+	 * invokeMethod
+	 * 
+	 * @author zWX235140
+	 * @param paramClass
+	 * @param paramString
+	 * @param paramArrayOfClass
+	 * @param paramObject
+	 * @param paramArrayOfObject
+	 * @return
+	 * @throws Exception
+	 */
+	public static Object invokeMethod(String paramString1, String paramString2,
+			Class[] paramArrayOfClass, Object paramObject,
+			Object[] paramArrayOfObject) throws Exception {
+		Method localMethod = Class.forName(paramString1).getDeclaredMethod(
+				paramString2, paramArrayOfClass);
+		localMethod.setAccessible(true);
+		return localMethod.invoke(paramObject, paramArrayOfObject);
+	}
+	
+	
+	  public static Object invokeMethod(String paramString1, String paramString2, Class[] paramArrayOfClass, Object[] paramArrayOfObject)
+			    throws Exception
+			  {
+			    Class localClass = Class.forName(paramString1);
+			    Method localMethod = localClass.getDeclaredMethod(paramString2, paramArrayOfClass);
+			    localMethod.setAccessible(true);
+			    return localMethod.invoke(localClass, paramArrayOfObject);
+			  }
+
+}

@@ -1,0 +1,21 @@
+package com.huawei.xdevice.perfmodel.util;
+
+import java.util.List;
+
+import android.hardware.Camera.Size;
+
+public class CameraUtil {
+
+	public static Size getMaxSize(List<Size> sizes){
+		int maxSize = 0;
+		int maxIndex = 0;
+		for(int i = 0 ; i < sizes.size() ;i++){
+			if(sizes.get(i).height * sizes.get(i).width > maxSize){
+				maxSize = sizes.get(i).height * sizes.get(i).width;
+				maxIndex = i;
+			}
+		}
+		
+		return sizes.get(maxIndex);
+	}
+}

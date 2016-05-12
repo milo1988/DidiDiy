@@ -1,0 +1,15 @@
+package com.huawei.xdevice.perfmodel;
+
+import android.app.Activity;
+import android.os.Bundle;
+
+public class MemoryTestActivity extends Activity {
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		
+	}
+	
+}
